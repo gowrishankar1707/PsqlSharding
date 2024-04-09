@@ -1,7 +1,7 @@
 const app=require("express")();
 /** databases */
 const {Client}=require("pg");
-const ConsistentHash=require("consistent-hash");
+const ConsistentHash=require("hashring");
 const crypto=require("crypto");
 const { url } = require("inspector");
 //created a hash ring
@@ -41,7 +41,26 @@ async function connect(){
     clients["5433"].connect();
     clients["5434"].connect();
 }
-app.get("/",(req,res)=>{
+app.get("/:urlId",async(req,res)=>{
+    //http://localhost:8082/1234
+    const urlId=req.params.urlId;
+    //get the hash value
+    const server=hr.get(urlId);
+    //query the respective server on Clients object
+    const psqlGetQuery="Select Id,Url from URL_TABLE where url_id=$1";
+    const getValues=[urlId];
+
+    const results=await clients[server].query(psqlGetQuery,getValues);
+    if(results.rowCount>0)
+        {
+            results.rows.forEach((row, index) => {
+                console.log(`Row ${index + 1}:`, row);
+              });
+        }
+        else{
+            console.log("There is no row:$1",[urlId]);
+        }
+    res.send("a");
   
 })
 
